@@ -1,13 +1,17 @@
 import React, {Component} from 'react';
 import {render} from 'react-dom';
 
+const serviceCache = {};
+
 async function connectService(serviceUUID) {
+	if(serviceCache[serviceUUID]) return serviceCache[serviceUUID];
+
 	const device = await navigator.bluetooth.requestDevice({
 		filters: [{services: [serviceUUID]}],
 		optionalServices: [serviceUUID]
 	});
 	const server = await device.gatt.connect()
-	return server.getPrimaryService(serviceUUID);
+	return serviceCache[serviceUUID] = await server.getPrimaryService(serviceUUID);
 };
 
 async function getCharacteristicValue(service, characteristicUUID) {
