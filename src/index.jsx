@@ -6,16 +6,13 @@ async function connectService(device, serviceUUID) {
 	return server.getPrimaryService(serviceUUID);
 };
 
-async function getCharacteristicValue(service, characteristicUUID) {
-	const characteristic = await service.getCharacteristic(characteristicUUID);
-	return characteristic.readValue();
-}
-
 const steps = value => 0x100 * value.getUint8(2) + value.getUint8(1);
 
-async function getSteps(device, serviceUUID) {
-	const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
-	return steps(value);
+async function listenToCharacteristic(device, serviceUUID, characteristicUUID) {
+	const service = await connectService(device, serviceUUID);
+	const characteristic = await service.getCharacteristic(characteristicUUID);
+	await characteristic.startNotifications();
+	return characteristic;
 }
 
 class ConnectDevice extends Component {
@@ -41,22 +38,24 @@ class ConnectDevice extends Component {
 }
 
 class Steps extends Component {
-	state = {pending: false};
+	state = {};
 
-	async getSteps() {
-		try {
-			this.setState({pending: true});
-			const steps = await getSteps(this.props.device, this.props.serviceUUID);
-			this.setState({steps, pending: false});
-		} catch(e) {
-			if(this.props.onerror) this.props.onerror(e);
-		}
+	async componentWillMount() {
+		const characteristic = await listenToCharacteristic(this.props.device, this.props.serviceUUID, this.props.characteristicUUID)
+		this.setState({
+			steps: steps(await characteristic.readValue()),
+		});
+
+		characteristic.addEventListener('characteristicvaluechanged', ev => {
+			this.setState({
+				steps: steps(ev.target.value),
+			});
+		});
 	}
 
 	render() {
 		return <div>
-			<button onClick={() => this.getSteps()}>Get steps</button>
-			{this.state.steps} {this.state.pending && 'loading'}
+			{this.state.steps}
 		</div>
 	}
 }
@@ -68,7 +67,7 @@ class App extends Component {
 		return <div>
 			{this.state.error && <span style={{color: 'red'}}>{this.state.error.toString()}</span>}
 			<ConnectDevice serviceUUID={0xfee7} onconnect={device => this.setState({device})} onerror={error => this.setState({error})} />
-			{this.state.device && <Steps device={this.state.device} serviceUUID={0xfee7} onerror={error => this.setState({error})} />}
+			{this.state.device && <Steps device={this.state.device} serviceUUID={0xfee7} characteristicUUID={0xfea1} onerror={error => this.setState({error})} />}
 		</div>
 	}
 }
