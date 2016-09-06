@@ -37,7 +37,7 @@ class ConnectDevice extends Component {
 }
 
 class Steps extends Component {
-	state = {pending: true};
+	state = {pending: false};
 
 	async getSteps() {
 		this.setState({pending: true});
@@ -48,7 +48,7 @@ class Steps extends Component {
 	render() {
 		return <div>
 			<button onClick={() => this.getSteps()}>Get steps</button>
-			{this.state.pending ? 'loading' : this.state.steps}
+			{this.state.steps} {this.state.pending && 'loading'}
 		</div>
 	}
 }
