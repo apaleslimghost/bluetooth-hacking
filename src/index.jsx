@@ -14,12 +14,8 @@ async function getCharacteristicValue(service, characteristicUUID) {
 const steps = value => 0x100 * value.getUint8(2) + value.getUint8(1);
 
 async function getSteps(device, serviceUUID) {
-	try {
-		const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
-		return steps(value);
-	} catch(e) {
-		if(this.props.onerror) this.props.onerror(e);
-	}
+	const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
+	return steps(value);
 }
 
 class ConnectDevice extends Component {
@@ -48,9 +44,13 @@ class Steps extends Component {
 	state = {pending: false};
 
 	async getSteps() {
-		this.setState({pending: true});
-		const steps = await getSteps(this.props.device, this.props.serviceUUID);
-		this.setState({steps, pending: false});
+		try {
+			this.setState({pending: true});
+			const steps = await getSteps(this.props.device, this.props.serviceUUID);
+			this.setState({steps, pending: false});
+		} catch(e) {
+			if(this.props.onerror) this.props.onerror(e);
+		}
 	}
 
 	render() {
