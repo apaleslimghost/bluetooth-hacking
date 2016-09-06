@@ -14,21 +14,29 @@ async function getCharacteristicValue(service, characteristicUUID) {
 const steps = value => 0x100 * value.getUint8(2) + value.getUint8(1);
 
 async function getSteps(device, serviceUUID) {
-	const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
-	return steps(value);
+	try {
+		const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
+		return steps(value);
+	} catch(e) {
+		if(this.props.onerror) this.props.onerror(e);
+	}
 }
 
 class ConnectDevice extends Component {
 	state = {};
 
 	async connect() {
-		const device = await navigator.bluetooth.requestDevice({
-			filters: [{services: [this.props.serviceUUID]}],
-			optionalServices: [this.props.serviceUUID],
-		});
+		try {
+			const device = await navigator.bluetooth.requestDevice({
+				filters: [{services: [this.props.serviceUUID]}],
+				optionalServices: [this.props.serviceUUID],
+			});
 
-		this.setState({device});
-		if(this.props.onconnect) this.props.onconnect(device);
+			this.setState({device});
+			if(this.props.onconnect) this.props.onconnect(device);
+		} catch(e) {
+			if(this.props.onerror) this.props.onerror(e);
+		}
 	}
 
 	render() {
@@ -58,8 +66,9 @@ class App extends Component {
 
 	render() {
 		return <div>
-			<ConnectDevice serviceUUID={0xfee7} onconnect={device => this.setState({device})} />
-			{this.state.device && <Steps device={this.state.device} serviceUUID={0xfee7} />}
+			{this.state.error && <span style={{color: 'red'}}>{this.state.error.toString()}</span>}
+			<ConnectDevice serviceUUID={0xfee7} onconnect={device => this.setState({device})} onerror={error => this.setState({error})} />
+			{this.state.device && <Steps device={this.state.device} serviceUUID={0xfee7} onerror={error => this.setState({error})} />}
 		</div>
 	}
 }
