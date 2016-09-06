@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {render} from 'react-dom';
 
-async function connectService(device) {
+async function connectService(device, serviceUUID) {
 	const server = await device.gatt.connect()
 	return server.getPrimaryService(serviceUUID);
 };
@@ -14,7 +14,7 @@ async function getCharacteristicValue(service, characteristicUUID) {
 const steps = value => 0x100 * value.getUint8(2) + value.getUint8(1);
 
 async function getSteps(device, serviceUUID) {
-	const value = await getCharacteristicValue(connectService(serviceUUID), 0xfea1);
+	const value = await getCharacteristicValue(await connectService(device, serviceUUID), 0xfea1);
 	return steps(value);
 }
 
@@ -36,4 +36,32 @@ class ConnectDevice extends Component {
 	}
 }
 
-render(<ConnectDevice serviceUUID={0xfee7} />, document.body);
+class Steps extends Component {
+	state = {pending: true};
+
+	async getSteps() {
+		this.setState({pending: true});
+		const steps = await getSteps(this.props.device, this.props.serviceUUID);
+		this.setState({steps, pending: false});
+	}
+
+	render() {
+		return <div>
+			<button onClick={() => this.getSteps()}>Get steps</button>
+			{this.state.pending ? 'loading' : this.state.steps}
+		</div>
+	}
+}
+
+class App extends Component {
+	state = {};
+
+	render() {
+		return <div>
+			<ConnectDevice serviceUUID={0xfee7} onconnect={device => this.setState({device})} />
+			{this.state.device && <Steps device={this.state.device} serviceUUID={0xfee7} />}
+		</div>
+	}
+}
+
+render(<App />, document.body);
