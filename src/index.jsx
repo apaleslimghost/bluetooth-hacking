@@ -1,15 +1,11 @@
 import React, {Component} from 'react';
 import {render} from 'react-dom';
 
-async function connectService(device, serviceUUID) {
-	const server = await device.gatt.connect()
-	return server.getPrimaryService(serviceUUID);
-};
-
 const steps = value => 0x100 * value.getUint8(2) + value.getUint8(1);
 
 async function listenToCharacteristic(device, serviceUUID, characteristicUUID) {
-	const service = await connectService(device, serviceUUID);
+	const server = await device.gatt.connect()
+	const service = server.getPrimaryService(serviceUUID);
 	const characteristic = await service.getCharacteristic(characteristicUUID);
 	await characteristic.startNotifications();
 	return characteristic;
